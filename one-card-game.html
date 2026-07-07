@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>원카드 대작전</title>
+<style>
+  :root {
+    --table: #2a2140;
+    --table-light: #382b55;
+    --cream: #fff8ec;
+    --ink: #2b2333;
+    --red: #ff5d5d;
+    --blue: #4d9de0;
+    --green: #57c785;
+    --yellow: #ffc84a;
+    --pink: #ff7ab8;
+    --shadow: rgba(0,0,0,0.35);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+    background: radial-gradient(ellipse at 50% 30%, var(--table-light) 0%, var(--table) 70%);
+    color: var(--cream);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ===== Opponents ===== */
+  #opponents {
+    display: flex;
+    justify-content: space-around;
+    padding: 14px 10px 4px;
+    gap: 10px;
+  }
+  .opponent {
+    text-align: center;
+    padding: 8px 14px;
+    border-radius: 16px;
+    transition: box-shadow .3s, background .3s;
+    position: relative;
+    min-width: 110px;
+  }
+  .opponent.active {
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 2px var(--yellow);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 2px var(--yellow); }
+    50% { box-shadow: 0 0 12px 2px var(--yellow); }
+  }
+  .opponent .name { font-weight: 800; font-size: 14px; margin-bottom: 6px; }
+  .opponent .cards {
+    display: flex;
+    justify-content: center;
+  }
+  .cardback {
+    width: 26px; height: 38px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #6a4fc1, #4a338f);
+    border: 2px solid var(--cream);
+    margin-left: -12px;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+  .cardback:first-child { margin-left: 0; }
+  .opponent .count { font-size: 12px; opacity: .7; margin-top: 4px; }
+  .bubble {
+    position: absolute;
+    top: -14px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--cream);
+    color: var(--ink);
+    font-weight: 900;
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    white-space: nowrap;
+    box-shadow: 0 3px 6px var(--shadow);
+    animation: pop .25s ease-out;
+    z-index: 5;
+  }
+  @keyframes pop {
+    from { transform: translateX(-50%) scale(.5); opacity: 0; }
+    to   { transform: translateX(-50%) scale(1); opacity: 1; }
+  }
+
+  /* ===== Table center ===== */
+  #table {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    position: relative;
+  }
+  #direction {
+    position: absolute;
+    font-size: 30px;
+    opacity: .35;
+    top: 8px;
+    transition: transform .4s;
+  }
+  .pile-label { font-size: 11px; opacity: .6; text-align: center; margin-top: 6px; }
+
+  /* ===== Cards ===== */
+  .card {
+    width: 76px; height: 110px;
+    border-radius: 12px;
+    background: var(--cream);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    box-shadow: 0 4px 10px var(--shadow);
+    position: relative;
+    border: 3px solid var(--cream);
+    flex-shrink: 0;
+  }
+  .card .glyph { font-size: 34px; line-height: 1; }
+  .card .label { font-size: 11px; margin-top: 6px; font-weight: 800; letter-spacing: 1px; }
+  .card .corner {
+    position: absolute;
+    top: 5px; left: 8px;
+    font-size: 13px;
+  }
+  .card.red    { border-color: var(--red);    } .card.red    .glyph, .card.red    .corner { color: var(--red); }
+  .card.blue   { border-color: var(--blue);   } .card.blue   .glyph, .card.blue   .corner { color: var(--blue); }
+  .card.green  { border-color: var(--green);  } .card.green  .glyph, .card.green  .corner { color: var(--green); }
+  .card.yellow { border-color: var(--yellow); } .card.yellow .glyph, .card.yellow .corner { color: #d19a1e; }
+  .card.wild {
+    border-image: linear-gradient(135deg, var(--red), var(--yellow), var(--green), var(--blue)) 1;
+    border-radius: 12px;
+    background:
+      linear-gradient(var(--cream), var(--cream)) padding-box,
+      linear-gradient(135deg, var(--red), var(--yellow), var(--green), var(--blue)) border-box;
+    border: 3px solid transparent;
+  }
+  .card.wild .glyph { 
+    background: linear-gradient(135deg, var(--red), var(--blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  #drawpile .card {
+    background: linear-gradient(135deg, #6a4fc1, #4a338f);
+    border-color: var(--cream);
+    cursor: pointer;
+    color: var(--cream);
+  }
+  #drawpile .card .glyph { color: var(--cream); font-size: 22px; }
+  #drawpile .card:hover { transform: translateY(-4px); }
+  #drawpile .card, #hand .card { transition: transform .15s, box-shadow .15s; }
+
+  #attack-badge {
+    position: absolute;
+    top: -12px; right: -12px;
+    background: var(--red);
+    color: white;
+    font-weight: 900;
+    border-radius: 50%;
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    box-shadow: 0 3px 8px var(--shadow);
+    animation: pop2 .3s ease-out;
+    z-index: 3;
+  }
+  @keyframes pop2 { from { transform: scale(0); } to { transform: scale(1); } }
+
+  /* ===== Message ===== */
+  #message {
+    text-align: center;
+    min-height: 24px;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 4px 12px;
+    color: var(--yellow);
+  }
+
+  /* ===== My hand ===== */
+  #myarea {
+    padding: 8px 0 18px;
+    background: rgba(0,0,0,0.18);
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  #myarea.active { box-shadow: inset 0 3px 0 var(--yellow); }
+  #mylabel {
+    text-align: center; font-size: 13px; font-weight: 800;
+    margin-bottom: 8px; opacity: .8;
+  }
+  #hand {
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 14px 18px 6px;
+    scrollbar-width: thin;
+  }
+  #hand::after { content: ''; flex: 0 0 10px; }
+  #hand .card { cursor: pointer; }
+  #hand .card.playable { box-shadow: 0 0 0 3px var(--yellow), 0 6px 12px var(--shadow); }
+  #hand .card.playable:hover { transform: translateY(-14px); }
+  #hand .card.dead { opacity: .45; filter: grayscale(.4); cursor: default; }
+
+  /* ===== Overlays ===== */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(20,14,36,0.75);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 18px;
+    z-index: 50;
+    backdrop-filter: blur(3px);
+  }
+  .overlay h2 { font-size: 26px; font-weight: 900; }
+  .overlay .sub { opacity: .8; font-size: 15px; text-align: center; line-height: 1.6; padding: 0 24px; }
+  .bigbtn {
+    font-family: inherit;
+    font-size: 20px; font-weight: 900;
+    padding: 16px 42px;
+    border-radius: 40px;
+    border: none;
+    background: var(--yellow);
+    color: var(--ink);
+    cursor: pointer;
+    box-shadow: 0 6px 0 #c79425, 0 10px 18px var(--shadow);
+    transition: transform .1s;
+  }
+  .bigbtn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c79425; }
+  .bigbtn.danger { background: var(--red); color: white; box-shadow: 0 6px 0 #b93a3a, 0 10px 18px var(--shadow); }
+  .bigbtn.danger:active { box-shadow: 0 2px 0 #b93a3a; }
+
+  #colorpick { display: flex; gap: 14px; }
+  .colorbtn {
+    width: 66px; height: 66px;
+    border-radius: 18px;
+    border: 4px solid var(--cream);
+    cursor: pointer;
+    transition: transform .12s;
+  }
+  .colorbtn:hover { transform: scale(1.12); }
+  .colorbtn.red { background: var(--red); }
+  .colorbtn.blue { background: var(--blue); }
+  .colorbtn.green { background: var(--green); }
+  .colorbtn.yellow { background: var(--yellow); }
+
+  #onecard-timer {
+    width: 220px; height: 8px;
+    background: rgba(255,255,255,.2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  #onecard-timer .bar {
+    height: 100%; width: 100%;
+    background: var(--pink);
+    animation: shrink 1s linear forwards;
+  }
+  @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+
+  /* 원카드 잡기 버튼 — 화면을 가리지 않는 떠 있는 패널 */
+  #catch-wrap {
+    position: fixed;
+    left: 50%; top: 40%;
+    transform: translate(-50%, -50%);
+    z-index: 48;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 22px 26px;
+    background: rgba(28,19,48,.92);
+    border: 3px solid var(--red);
+    border-radius: 24px;
+    box-shadow: 0 12px 30px var(--shadow);
+    animation: catchpop .25s ease-out;
+  }
+  #catch-wrap .sub { padding: 0; font-size: 13px; }
+  @keyframes catchpop {
+    from { transform: translate(-50%,-50%) scale(.6); opacity: 0; }
+    to   { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  }
+
+  .hidden { display: none !important; }
+
+  #mutebtn {
+    position: fixed; top: 10px; right: 10px; z-index: 48;
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.3);
+    background: rgba(255,255,255,.08);
+    color: var(--cream);
+    font-size: 18px;
+    cursor: pointer;
+  }
+  #mutebtn:hover { background: rgba(255,255,255,.18); }
+
+  .confetti {
+    position: fixed; top: -24px; z-index: 60;
+    width: 10px; height: 16px;
+    border-radius: 3px;
+    pointer-events: none;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to { transform: translateY(112vh) rotate(720deg); }
+  }
+
+  /* ===== 카드 이동 애니메이션 ===== */
+  #fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 45; }
+  .card.flying {
+    position: fixed; margin: 0;
+    box-shadow: 0 10px 22px var(--shadow);
+    transition: transform .38s cubic-bezier(.45,.05,.35,1);
+    will-change: transform;
+  }
+  .card.back { background: linear-gradient(135deg, #6a4fc1, #4a338f); border-color: var(--cream); }
+  .card.back .glyph { color: var(--cream); }
+  @keyframes land { 0% { transform: scale(1.18); } 60% { transform: scale(.94); } 100% { transform: scale(1); } }
+  .landed { animation: land .22s ease-out; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%,60% { transform: translateX(-7px); }
+    40%,80% { transform: translateX(7px); }
+  }
+  .shake { animation: shake .4s; }
+
+  /* ===== 특수 카드 연출 ===== */
+  .stamp {
+    position: fixed; z-index: 46;
+    transform: translate(-50%, -50%);
+    font-size: 26px; font-weight: 900;
+    color: var(--cream);
+    background: rgba(28, 19, 48, .88);
+    border: 3px solid var(--yellow);
+    padding: 10px 22px;
+    border-radius: 20px;
+    pointer-events: none;
+    white-space: nowrap;
+    text-shadow: 0 2px 6px rgba(0,0,0,.5);
+    animation: stampIn 1.1s ease forwards;
+  }
+  @keyframes stampIn {
+    0%   { transform: translate(-50%,-50%) scale(.3) rotate(-8deg); opacity: 0; }
+    15%  { transform: translate(-50%,-50%) scale(1.15) rotate(2deg); opacity: 1; }
+    25%  { transform: translate(-50%,-50%) scale(1) rotate(0deg); }
+    78%  { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%,-50%) scale(.95); opacity: 0; }
+  }
+  #direction.spin { animation: bigspin .9s cubic-bezier(.3,.1,.3,1); opacity: .9; }
+  @keyframes bigspin {
+    0%   { transform: scale(1) rotate(0deg); }
+    50%  { transform: scale(2.4) rotate(360deg); opacity: 1; }
+    100% { transform: scale(1) rotate(720deg); }
+  }
+  .color-pulse {
+    position: fixed; z-index: 44;
+    left: 50%; top: 42%;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: pulseOut .9s ease-out forwards;
+  }
+  @keyframes pulseOut {
+    0%   { box-shadow: 0 0 0 0 var(--c); opacity: .8; }
+    100% { box-shadow: 0 0 0 120vmax var(--c); opacity: 0; }
+  }
+
+  @media (max-width: 480px) {
+    .card { width: 62px; height: 92px; }
+    .card .glyph { font-size: 27px; }
+    #table { gap: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .01s !important; transition-duration: .01s !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="fx-layer"></div>
+<button id="mutebtn" onclick="toggleMute()" title="효과음 켜기/끄기">🔊</button>
+<div id="opponents"></div>
+
+<div id="table">
+  <div id="direction">⟳</div>
+  <div id="drawpile">
+    <div class="card" onclick="humanDraw()"><div class="glyph">🂠</div><div class="label">뽑기</div></div>
+    <div class="pile-label" id="deckcount"></div>
+  </div>
+  <div id="discard" style="position:relative;">
+    <div id="topcard"></div>
+    <div class="pile-label">버린 카드</div>
+  </div>
+</div>
+
+<div id="message"></div>
+
+<div id="myarea">
+  <div id="mylabel">내 카드</div>
+  <div id="hand"></div>
+</div>
+
+<!-- 시작 화면 -->
+<div class="overlay" id="start-overlay">
+  <h2>🃏 원카드 대작전</h2>
+  <div class="sub">
+    같은 색 또는 같은 숫자의 카드를 내세요.<br>
+    ⚡공격 카드는 겹쳐 반격할 수 있어요!<br>
+    카드가 1장 남은 사람이 보이면 <b>"원카드!"</b>를 눌러 잡으세요 — 걸린 사람은 2장을 먹어요!
+  </div>
+  <button class="bigbtn" onclick="startGame()">게임 시작</button>
+</div>
+
+<!-- 색 선택 -->
+<div class="overlay hidden" id="color-overlay">
+  <h2>색을 고르세요</h2>
+  <div id="colorpick">
+    <button class="colorbtn red" onclick="pickColor('red')"></button>
+    <button class="colorbtn blue" onclick="pickColor('blue')"></button>
+    <button class="colorbtn green" onclick="pickColor('green')"></button>
+    <button class="colorbtn yellow" onclick="pickColor('yellow')"></button>
+  </div>
+</div>
+
+<!-- 원카드 잡기 버튼 (AI가 1장일 때 사람이 눌러 잡음) -->
+<div class="hidden" id="catch-wrap">
+  <button class="bigbtn danger" onclick="humanCatch()">🚨 원카드!</button>
+  <div id="onecard-timer"><div class="bar"></div></div>
+  <div class="sub">먼저 눌러서 잡으면 상대가 2장을 먹어요!</div>
+</div>
+
+<!-- 게임 종료 -->
+<div class="overlay hidden" id="end-overlay">
+  <h2 id="end-title"></h2>
+  <div class="sub" id="end-sub"></div>
+  <button class="bigbtn" onclick="startGame()">다시 하기</button>
+</div>
+
+<script>
+// ================= 카드 정의 =================
+const COLORS = ['red', 'blue', 'green', 'yellow'];
+const COLOR_KO = { red: '빨강', blue: '파랑', green: '초록', yellow: '노랑' };
+const GLYPHS = { skip: '⏭', reverse: '🔄', '+2': '⚡', wild: '🎨', '+4': '💣' };
+const LABELS = { skip: '점프', reverse: '반대로', '+2': '공격', wild: '만능', '+4': '폭탄' };
+
+function buildDeck() {
+  const d = [];
+  for (const c of COLORS) {
+    d.push({ color: c, value: '0' });
+    for (let n = 1; n <= 9; n++) { d.push({ color: c, value: String(n) }); d.push({ color: c, value: String(n) }); }
+    for (const s of ['skip', 'reverse', '+2']) { d.push({ color: c, value: s }); d.push({ color: c, value: s }); }
+  }
+  for (let i = 0; i < 4; i++) { d.push({ color: 'wild', value: 'wild' }); d.push({ color: 'wild', value: '+4' }); }
+  return d;
+}
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ================= 사운드 (외부 파일 없이 직접 합성) =================
+let audioCtx = null, muted = false;
+function ac() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!audioCtx) audioCtx = new AC();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function toggleMute() {
+  muted = !muted;
+  document.getElementById('mutebtn').textContent = muted ? '🔇' : '🔊';
+}
+// 기본 톤: 주파수, 길이(초), 파형, 볼륨, 시작 지연, 미끄러질 목표 주파수
+function tone(freq, dur, type, vol, when, slideTo) {
+  if (muted) return;
+  const ctx = ac(); if (!ctx) return;
+  const t = ctx.currentTime + (when || 0);
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(vol || 0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+// 종이 스치는 소리: 고음 위주의 "쉬익" 공기음 (저음 몸통을 없애 타악기 느낌 제거)
+function swish(dur, vol, when) {
+  if (muted) return;
+  const ctx = ac(); if (!ctx) return;
+  const t = ctx.currentTime + (when || 0);
+  const len = Math.floor(ctx.sampleRate * dur);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    // 부드럽게 올랐다 내려가는 창(window) — 갑자기 터지는 "펑" 방지
+    const x = i / len;
+    const env = Math.sin(Math.PI * x) * (1 - x * 0.3);
+    d[i] = (Math.random() * 2 - 1) * env;
+  }
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  // 고역통과를 높게(2500Hz) 잡아 저음 몸통 제거 → 북소리 느낌이 사라지고 공기감만 남음
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2500;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 9000; // 날카로운 최고음만 살짝 깎음
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol || 0.12, t + dur * 0.35); // 서서히 차오르게
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(ctx.destination);
+  src.start(t); src.stop(t + dur + 0.02);
+}
+const SFX = {
+  play()    { swish(0.18, 0.38); },
+  draw(w)   { swish(0.2, 0.3, w); },
+  attack()  { tone(1300, 0.12, 'sawtooth', 0.1, 0, 300); tone(150, 0.28, 'sawtooth', 0.18, 0.02, 55); },
+  skip()    { tone(480, 0.16, 'square', 0.1, 0, 940); },
+  reverse() { tone(300, 0.2, 'sine', 0.14, 0, 900); tone(900, 0.2, 'sine', 0.14, 0.18, 300); },
+  wild()    { tone(523, 0.12, 'sine', 0.13); tone(659, 0.12, 'sine', 0.13, 0.09); tone(784, 0.2, 'sine', 0.13, 0.18); },
+  onecard() { tone(880, 0.1, 'square', 0.13); tone(1175, 0.18, 'square', 0.13, 0.1); },
+  penalty() { tone(320, 0.24, 'sawtooth', 0.13, 0, 200); tone(250, 0.34, 'sawtooth', 0.13, 0.22, 140); },
+  turn()    { tone(880, 0.1, 'sine', 0.08); },
+  win()     { [523, 659, 784, 1047, 1319].forEach((f2, i) => tone(f2, 0.24, 'triangle', 0.15, i * 0.13)); },
+  lose()    { [400, 340, 285, 220].forEach((f2, i) => tone(f2, 0.3, 'sine', 0.13, i * 0.2)); },
+};
+
+// ================= 게임 상태 =================
+let deck, discard, players, cur, dir, attack, curColor, busy, pendingWild, onecardTimer;
+let topHidden = false; // 카드가 날아가는 동안 버린 더미 맨 위를 숨김
+
+// ================= 애니메이션 =================
+function flyCard(fromRect, toRect, html, cls, delay, onEnd) {
+  const fx = document.getElementById('fx-layer');
+  const el = document.createElement('div');
+  el.className = 'card flying ' + cls;
+  el.innerHTML = html;
+  el.style.left = fromRect.left + 'px';
+  el.style.top = fromRect.top + 'px';
+  el.style.width = fromRect.width + 'px';
+  el.style.height = fromRect.height + 'px';
+  fx.appendChild(el);
+  const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
+  const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
+  const sx = toRect.width / fromRect.width;
+  const sy = toRect.height / fromRect.height;
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      el.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+    }, delay);
+  });
+  setTimeout(() => { el.remove(); if (onEnd) onEnd(); }, 400 + delay);
+}
+
+// 카드 내기: 출발 위치 → 버린 더미로 날아감
+function animatePlay(fromRect, card) {
+  const target = document.querySelector('#topcard .card');
+  if (!fromRect || !target) { topHidden = false; return; }
+  const cls = card.color === 'wild' ? 'wild' : card.color;
+  flyCard(fromRect, target.getBoundingClientRect(), cardHTML(card), cls, 0, () => {
+    topHidden = false;
+    const t = document.querySelector('#topcard .card');
+    if (t) { t.style.visibility = ''; t.classList.add('landed'); }
+  });
+}
+
+// 카드 먹기: 렌더가 모두 끝난 뒤 실행되도록 큐에 담아뒀다가 한 번에 처리
+let drawFxQueue = [];
+function queueDrawFx(playerIdx, n, shake) {
+  drawFxQueue.push({ playerIdx, n, shake });
+}
+function flushDrawFx() {
+  const q = drawFxQueue;
+  drawFxQueue = [];
+  for (const d of q) {
+    animateDraw(d.playerIdx, d.n);
+    for (let i = 0; i < Math.min(d.n, 5); i++) SFX.draw(i * 0.1);
+    if (d.shake) { shakePlayer(d.playerIdx); SFX.penalty(); }
+  }
+}
+
+// 더미에서 뒷면 카드가 "새 카드가 놓일 자리"로 원래 크기 그대로 날아가 착지
+function animateDraw(playerIdx, n) {
+  const deckEl = document.querySelector('#drawpile .card');
+  if (!deckEl) return;
+  const from = deckEl.getBoundingClientRect();
+  const count = Math.min(n, 5); // 너무 많으면 5장까지만 표시
+
+  if (playerIdx === 0) {
+    // 내 손패: 방금 추가된 카드들을 잠시 숨기고, 그 자리로 날려보낸 뒤 공개
+    const hand = document.getElementById('hand');
+    hand.scrollLeft = hand.scrollWidth; // 새 카드 자리가 화면에 보이게
+    const cards = hand.querySelectorAll('.card');
+    const total = players[0].hand.length;
+    for (let i = 0; i < count; i++) {
+      const el = cards[total - count + i];
+      if (!el) continue;
+      el.style.visibility = 'hidden';
+      const to = el.getBoundingClientRect();
+      flyCard(from, to, '<div class="glyph">🂠</div>', 'back', i * 100, () => {
+        el.style.visibility = '';
+        el.classList.add('landed');
+      });
+    }
+  } else {
+    // 상대: 새로 생긴 뒷면 카드 자리로 착지 (8장 넘게 표시 중이면 카드 무더기 중앙으로)
+    const stack = document.querySelector('#opp-' + playerIdx + ' .cards');
+    if (!stack) return;
+    const backs = stack.querySelectorAll('.cardback');
+    const handLen = players[playerIdx].hand.length;
+    for (let i = 0; i < count; i++) {
+      const el = backs[handLen - count + i];
+      let to;
+      if (el) {
+        el.style.visibility = 'hidden';
+        to = el.getBoundingClientRect();
+      } else {
+        const r = stack.getBoundingClientRect();
+        to = { left: r.left + r.width / 2 - 13, top: r.top + r.height / 2 - 19, width: 26, height: 38 };
+      }
+      flyCard(from, to, '', 'back', i * 100, () => {
+        if (el) el.style.visibility = '';
+      });
+    }
+  }
+}
+
+// 특수 카드 연출: 도장, 방향 회전, 색 물결
+function stampAt(x, y, text, borderColor) {
+  const el = document.createElement('div');
+  el.className = 'stamp';
+  el.textContent = text;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  if (borderColor) el.style.borderColor = `var(--${borderColor})`;
+  document.getElementById('fx-layer').appendChild(el);
+  setTimeout(() => el.remove(), 1150);
+}
+function stampOnPlayer(i, text, borderColor) {
+  const el = i === 0 ? document.getElementById('myarea') : document.getElementById('opp-' + i);
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  stampAt(r.left + r.width / 2, Math.max(r.top + r.height / 2, 40), text, borderColor);
+}
+function stampCenter(text, borderColor) {
+  stampAt(window.innerWidth / 2, window.innerHeight * 0.42, text, borderColor);
+}
+function spinDirection() {
+  const el = document.getElementById('direction');
+  el.classList.remove('spin');
+  void el.offsetWidth; // 애니메이션 재시작 트릭
+  el.classList.add('spin');
+  setTimeout(() => el.classList.remove('spin'), 950);
+}
+function colorSplash(color) {
+  SFX.wild();
+  const el = document.createElement('div');
+  el.className = 'color-pulse';
+  el.style.setProperty('--c', `var(--${color})`);
+  document.getElementById('fx-layer').appendChild(el);
+  setTimeout(() => el.remove(), 950);
+}
+
+// 카드 효과에 맞는 연출을 계산 (playCard 직후, 턴이 넘어가기 전에 호출해야 함)
+function specialFx(card) {
+  const len = players.length;
+  if (card.value === 'skip') {
+    const t = (cur + dir + len * 3) % len;
+    return () => { SFX.skip(); stampOnPlayer(t, '⏭ 건너뜀!'); };
+  }
+  if (card.value === 'reverse') {
+    return () => { SFX.reverse(); spinDirection(); stampCenter('🔄 반대로!'); };
+  }
+  if (card.value === '+2' || card.value === '+4') {
+    const t = (cur + dir + len * 3) % len;
+    const n = attack; // 누적된 공격량
+    return () => { SFX.attack(); stampOnPlayer(t, `⚡ +${n} 공격!`, 'red'); };
+  }
+  return null;
+}
+
+// 벌칙 흔들림
+function shakePlayer(i) {
+  const el = i === 0 ? document.getElementById('myarea') : document.getElementById('opp-' + i);
+  if (!el) return;
+  el.classList.add('shake');
+  setTimeout(() => el.classList.remove('shake'), 450);
+}
+
+function startGame() {
+  deck = shuffle(buildDeck());
+  players = [
+    { name: '나', hand: [], human: true, declared: false },
+    { name: 'AI 민준', hand: [], human: false, declared: false },
+    { name: 'AI 서연', hand: [], human: false, declared: false },
+  ];
+  for (const p of players) for (let i = 0; i < 7; i++) p.hand.push(deck.pop());
+  // 시작 카드는 숫자 카드로
+  let first;
+  do { first = deck.pop(); if (first.color === 'wild' || !isNumberCard(first.value)) deck.unshift(first); }
+  while (first.color === 'wild' || !isNumberCard(first.value));
+  discard = [first];
+  curColor = first.color;
+  cur = 0; dir = 1; attack = 0; busy = false; pendingWild = null;
+  document.getElementById('start-overlay').classList.add('hidden');
+  document.getElementById('end-overlay').classList.add('hidden');
+  setMessage('게임 시작! 당신 차례예요.');
+  render();
+}
+
+// ================= 규칙 =================
+function topCard() { return discard[discard.length - 1]; }
+function isNumberCard(v) { return /^[0-9]$/.test(v); }
+function canPlay(card) {
+  if (attack > 0) {
+    if (card.value === '+4') return true;
+    if (card.value === '+2' && (topCard().value === '+2' || topCard().value === '+4')) return true;
+    return false;
+  }
+  if (card.color === 'wild') return true;
+  return card.color === curColor || card.value === topCard().value;
+}
+function drawCards(p, n) {
+  for (let i = 0; i < n; i++) {
+    if (deck.length === 0) {
+      if (discard.length <= 1) break;
+      const t = discard.pop();
+      deck = shuffle(discard);
+      discard = [t];
+    }
+    p.hand.push(deck.pop());
+  }
+  p.declared = false;
+}
+
+// ================= 진행 =================
+function nextTurn(skip) {
+  cur = (cur + dir * (1 + (skip ? 1 : 0)) + players.length * 3) % players.length;
+  render();
+  flushDrawFx();
+  if (players[cur].human) {
+    SFX.turn();
+    if (attack > 0 && !players[cur].hand.some(canPlay)) {
+      setMessage(`반격 카드가 없어요! 카드 더미를 눌러 ${attack}장을 받으세요.`);
+    } else if (attack > 0) {
+      setMessage(`⚡ 공격받는 중! 반격하거나 ${attack}장을 받으세요.`);
+    } else {
+      setMessage('당신 차례예요.');
+    }
+  } else {
+    busy = true;
+    setTimeout(aiTurn, 900 + Math.random() * 600);
+  }
+}
+
+function playCard(p, idx) {
+  const card = p.hand.splice(idx, 1)[0];
+  discard.push(card);
+  if (card.color !== 'wild') curColor = card.color;
+
+  let skip = false;
+  if (card.value === '+2') attack += 2;
+  if (card.value === '+4') attack += 4;
+  if (card.value === 'skip') skip = true;
+  if (card.value === 'reverse') dir *= -1;
+
+  return { card, skip };
+}
+
+function afterPlay(p, result) {
+  render();
+  if (p.hand.length === 0) return endGame(p);
+
+  // 원카드! 규칙: 1장이 된 사람을 남들이 잡으면 벌칙 2장
+  if (p.hand.length === 1) {
+    if (p.human) {
+      // 내가 1장 → AI들이 잡으려 함
+      resolveHumanOneCard(result);
+      return;
+    } else {
+      // AI가 1장 → 사람에게 잡을 기회 (버튼)
+      showCatchButton(p, () => continueTurn(result));
+      return;
+    }
+  }
+  continueTurn(result);
+}
+
+// 내가 1장이 됐을 때: AI들이 확률적으로 잡음
+function resolveHumanOneCard(result) {
+  busy = true;
+  const ais = players.filter(pl => !pl.human);
+  const catcher = ais[Math.floor(Math.random() * ais.length)];
+  const caught = Math.random() < 0.6; // 60% 확률로 들킴
+  setTimeout(() => {
+    if (caught) {
+      showBubble(catcher, '원카드!');
+      drawCards(players[0], 2);
+      SFX.penalty();
+      setMessage(`${catcher.name}에게 딱 걸렸어요! 벌칙 2장 😱`);
+      render();
+      queueDrawFx(0, 2, true);
+    } else {
+      setMessage('아무도 못 봤어요! 무사히 넘어갔어요 😏');
+    }
+    busy = false;
+    continueTurn(result);
+  }, 1000);
+}
+
+function continueTurn(result) {
+  const { card, skip } = result;
+  if (card.color === 'wild' && players[cur].human) {
+    pendingWild = { skip };
+    flushDrawFx();
+    document.getElementById('color-overlay').classList.remove('hidden');
+    return;
+  }
+  nextTurn(skip);
+}
+
+function pickColor(c) {
+  curColor = c;
+  document.getElementById('color-overlay').classList.add('hidden');
+  setMessage(`색을 ${COLOR_KO[c]}(으)로 바꿨어요!`);
+  colorSplash(c);
+  const skip = pendingWild.skip;
+  pendingWild = null;
+  render();
+  nextTurn(skip);
+}
+
+// ================= 사람 =================
+function humanPlay(idx, ev) {
+  if (busy || cur !== 0 || pendingWild) return;
+  const p = players[0];
+  if (!canPlay(p.hand[idx])) return;
+  const fromRect = ev && ev.currentTarget ? ev.currentTarget.getBoundingClientRect() : null;
+  const result = playCard(p, idx);
+  SFX.play();
+  const fx = specialFx(result.card); // 턴이 넘어가기 전에 대상 계산
+  announcePlay(p, result.card);
+  if (fromRect) topHidden = true;
+  afterPlay(p, result);
+  if (fromRect) animatePlay(fromRect, result.card);
+  if (fx) setTimeout(fx, 300); // 카드가 착지할 즈음 연출
+}
+
+function humanDraw() {
+  if (busy || cur !== 0 || pendingWild) return;
+  const p = players[0];
+  if (attack > 0) {
+    if (p.hand.some(canPlay)) { setMessage('반격할 수 있어요! 공격 카드를 내보세요. (더미를 다시 누르면 받기)'); 
+      if (!humanDraw.confirm) { humanDraw.confirm = true; setTimeout(() => humanDraw.confirm = false, 1500); return; }
+    }
+    const n = attack;
+    drawCards(p, n);
+    setMessage(`${n}장을 받았어요... 😵`);
+    attack = 0;
+    humanDraw.confirm = false;
+    render();
+    queueDrawFx(0, n, true);
+    nextTurn(false);
+  } else {
+    drawCards(p, 1);
+    setMessage('1장을 뽑고 차례를 넘겼어요.');
+    render();
+    queueDrawFx(0, 1, false);
+    nextTurn(false);
+  }
+}
+
+let catchTarget = null, catchTimer = null, catchCb = null;
+function showCatchButton(aiPlayer, callback) {
+  catchTarget = aiPlayer;
+  catchCb = callback;
+  busy = true;
+  const wrap = document.getElementById('catch-wrap');
+  const bar = wrap.querySelector('.bar');
+  bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = '';
+  wrap.classList.remove('hidden');
+  setMessage(`${aiPlayer.name}이(가) 1장 남았어요! 빨리 "원카드!"를 누르세요!`);
+  catchTimer = setTimeout(() => {
+    // 시간 초과 → AI가 무사히 선언
+    wrap.classList.add('hidden');
+    showBubble(aiPlayer, '원카드!');
+    setMessage(`${aiPlayer.name}: 원카드! (놓쳤어요)`);
+    finishCatch();
+  }, 1000);
+}
+function humanCatch() {
+  if (!catchTarget) return;
+  clearTimeout(catchTimer);
+  document.getElementById('catch-wrap').classList.add('hidden');
+  const target = catchTarget;
+  drawCards(target, 2);
+  SFX.penalty();
+  setMessage(`잡았다! ${target.name}이(가) 벌칙 2장! 🎯`);
+  render();
+  queueDrawFx(players.indexOf(target), 2, true);
+  flushDrawFx();
+  finishCatch();
+}
+function finishCatch() {
+  busy = false;
+  catchTarget = null;
+  const cb = catchCb; catchCb = null;
+  if (cb) cb();
+}
+
+// ================= AI =================
+function aiTurn() {
+  const p = players[cur];
+  const me = cur; // 애니메이션용 인덱스 보관
+  const playable = p.hand.map((c, i) => ({ c, i })).filter(x => canPlay(x.c));
+
+  if (playable.length === 0) {
+    let n;
+    if (attack > 0) {
+      n = attack;
+      drawCards(p, n);
+      setMessage(`${p.name}이(가) ${n}장을 받았어요!`);
+      attack = 0;
+    } else {
+      n = 1;
+      drawCards(p, 1);
+      setMessage(`${p.name}이(가) 1장을 뽑았어요.`);
+    }
+    busy = false;
+    render();
+    queueDrawFx(me, n, n > 1);
+    nextTurn(false);
+    return;
+  }
+
+  const oppEl = document.getElementById('opp-' + me);
+  const fromRect = oppEl ? oppEl.getBoundingClientRect() : null;
+
+  // 전략: 공격받으면 반격, 아니면 특수카드 아끼되 손패 많으면 사용
+  let pick;
+  const specials = playable.filter(x => !isNumberCard(x.c.value));
+  const numbers = playable.filter(x => isNumberCard(x.c.value));
+  if (attack > 0) pick = playable[0];
+  else if (numbers.length > 0 && p.hand.length > 3) pick = numbers[Math.floor(Math.random() * numbers.length)];
+  else pick = (specials[0] || numbers[0]);
+
+  const result = playCard(p, pick.i);
+  SFX.play();
+  const fx = specialFx(result.card);
+  if (result.card.color === 'wild') {
+    // 손에 가장 많은 색 선택
+    const cnt = { red: 0, blue: 0, green: 0, yellow: 0 };
+    for (const c of p.hand) if (c.color !== 'wild') cnt[c.color]++;
+    curColor = COLORS.reduce((a, b) => cnt[a] >= cnt[b] ? a : b);
+    const chosen = curColor;
+    setTimeout(() => {
+      setMessage(`${p.name}: ${COLOR_KO[chosen]}(으)로 바꿀게!`);
+      colorSplash(chosen);
+    }, 400);
+  }
+  announcePlay(p, result.card);
+  busy = false;
+  if (fromRect) topHidden = true;
+  afterPlay(p, result);
+  if (fromRect) animatePlay(fromRect, result.card);
+  if (fx) setTimeout(fx, 300);
+}
+
+// ================= 렌더 =================
+function cardHTML(card) {
+  const isNum = isNumberCard(card.value);
+  const glyph = isNum ? card.value : GLYPHS[card.value];
+  const label = isNum ? COLOR_KO[card.color] : LABELS[card.value];
+  const corner = isNum ? card.value : GLYPHS[card.value];
+  return `<div class="corner">${corner}</div><div class="glyph">${glyph}</div><div class="label">${label}</div>`;
+}
+
+function render() {
+  // 상대
+  const opp = document.getElementById('opponents');
+  opp.innerHTML = '';
+  for (let i = 1; i < players.length; i++) {
+    const p = players[i];
+    const backs = p.hand.slice(0, 8).map(() => '<div class="cardback"></div>').join('');
+    opp.innerHTML += `
+      <div class="opponent ${cur === i ? 'active' : ''}" id="opp-${i}">
+        <div class="name">${p.name}</div>
+        <div class="cards">${backs}</div>
+        <div class="count">${p.hand.length}장</div>
+      </div>`;
+  }
+
+  // 버린 카드
+  const t = topCard();
+  const colorClass = t.color === 'wild' ? `wild` : t.color;
+  // 만능 카드가 위에 있으면 선택된 색 테두리 표시
+  const effClass = (t.color === 'wild' && curColor) ? curColor : colorClass;
+  document.getElementById('topcard').innerHTML =
+    `<div class="card ${t.color === 'wild' ? 'wild' : effClass}">${cardHTML(t)}</div>` +
+    (attack > 0 ? `<div id="attack-badge">+${attack}</div>` : '') +
+    (t.color === 'wild' ? `<div class="pile-label" style="color:var(--${curColor})">▶ ${COLOR_KO[curColor]}</div>` : '');
+
+  if (topHidden) {
+    const tc = document.querySelector('#topcard .card');
+    if (tc) tc.style.visibility = 'hidden';
+  }
+
+  document.getElementById('deckcount').textContent = `${deck.length}장 남음`;
+  document.getElementById('direction').textContent = dir === 1 ? '⟳' : '⟲';
+  document.getElementById('direction').style.transform = dir === 1 ? 'scaleX(1)' : 'scaleX(-1)';
+
+  // 내 손패
+  const hand = document.getElementById('hand');
+  const me = players[0];
+  const myTurn = cur === 0 && !busy;
+  hand.innerHTML = me.hand.map((c, i) => {
+    const ok = myTurn && canPlay(c);
+    const cls = c.color === 'wild' ? 'wild' : c.color;
+    return `<div class="card ${cls} ${myTurn ? (ok ? 'playable' : 'dead') : ''}" onclick="humanPlay(${i}, event)">${cardHTML(c)}</div>`;
+  }).join('');
+  document.getElementById('mylabel').textContent = `내 카드 (${me.hand.length}장)`;
+  document.getElementById('myarea').classList.toggle('active', cur === 0);
+}
+
+function announcePlay(p, card) {
+  const isNum = isNumberCard(card.value);
+  const name = isNum ? `${COLOR_KO[card.color]} ${card.value}` : LABELS[card.value];
+  if (!p.human) setMessage(`${p.name}: ${name}!`);
+}
+
+function showBubble(p, text) {
+  SFX.onecard();
+  const i = players.indexOf(p);
+  const el = i === 0 ? document.getElementById('myarea') : document.getElementById('opp-' + i);
+  if (!el) return;
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  b.textContent = text;
+  el.style.position = 'relative';
+  el.appendChild(b);
+  setTimeout(() => b.remove(), 1800);
+}
+
+function setMessage(msg) {
+  document.getElementById('message').textContent = msg;
+}
+
+function confettiBurst() {
+  const colors = ['--red', '--blue', '--green', '--yellow', '--pink'];
+  for (let i = 0; i < 70; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.background = `var(${colors[i % colors.length]})`;
+    el.style.animationDuration = (2 + Math.random() * 1.8) + 's';
+    el.style.animationDelay = (Math.random() * 0.6) + 's';
+    el.style.transform = `rotate(${Math.random() * 360}deg)`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4600);
+  }
+}
+
+function endGame(winner) {
+  if (winner.human) { SFX.win(); confettiBurst(); }
+  else SFX.lose();
+  const ov = document.getElementById('end-overlay');
+  document.getElementById('end-title').textContent = winner.human ? '🎉 승리!' : '😢 패배...';
+  document.getElementById('end-sub').textContent = winner.human
+    ? '모든 카드를 다 냈어요! 축하합니다!'
+    : `${winner.name}이(가) 먼저 카드를 다 냈어요. 다시 도전해보세요!`;
+  ov.classList.remove('hidden');
+}
+</script>
+</body>
+</html>
